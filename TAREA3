@@ -1,0 +1,146 @@
+--Creacion de las Tablas 
+CREATE TABLE [Facultad] (
+  [Facultad_id] integer PRIMARY KEY,
+  [Nombre_Facultad] varchar(150)
+)
+GO
+
+CREATE TABLE [Estudiante] (
+  [Estudiante_id] integer PRIMARY KEY,
+  [Nombre] varchar(150),
+  [Apellido] varchar(150),
+  [Creditos] integer
+)
+GO
+
+CREATE TABLE [Curso] (
+  [Curso_id] integer PRIMARY KEY,
+  [Nombre_Curso] varchar(150),
+  [Horario] varchar(20),
+  [Facultad_id] integer,
+  [Salon_id] varchar(10)
+)
+GO
+
+CREATE TABLE [Asignacion] (
+  [Estudiante_id] integer,
+  [Curso_id] integer,
+  [Seccion] varchar(3),
+  PRIMARY KEY ([Estudiante_id], [Curso_id], [Seccion])
+)
+GO
+
+CREATE TABLE [Salon] (
+  [Salon_id] varchar(10) PRIMARY KEY,
+  [Ubicacion] varchar(150),
+  [Capacidad] integer
+)
+GO
+
+ALTER TABLE [Curso] ADD CONSTRAINT [Curso_Facultad] FOREIGN KEY ([Facultad_id]) REFERENCES [Facultad] ([Facultad_id])
+GO
+
+ALTER TABLE [Curso] ADD CONSTRAINT [Curso_Salon] FOREIGN KEY ([Salon_id]) REFERENCES [Salon] ([Salon_id])
+GO
+
+ALTER TABLE [Asignacion] ADD CONSTRAINT [Asignacion_Curso] FOREIGN KEY ([Curso_id]) REFERENCES [Curso] ([Curso_id])
+GO
+
+ALTER TABLE [Asignacion] ADD CONSTRAINT [Asignacion_Estudiante] FOREIGN KEY ([Estudiante_id]) REFERENCES [Estudiante] ([Estudiante_id])
+GO
+------------------------------------------------------------------------------
+
+--nsercion de datos
+INSERT INTO Estudiante VALUES ('1001','HENRY','DELVALLE','100')
+INSERT INTO Salon VALUES ('s12','marista','50')
+INSERT INTO Curso VALUES ('101','basededatos2','8am','5990','s12')
+INSERT INTO Facultad VALUES ('5990','ingeniera')
+INSERT INTO Asignacion VALUES ('1001','101','a')
+
+
+SELECT * FROM Estudiante
+SELECT * FROM Salon
+SELECT * FROM Facultad
+SELECT * FROM Curso
+SELECT * FROM Asignacion
+
+--Creacion de los 2 procesos
+CREATE PROCEDURE InscribirEstudiante
+	@CodigoEstudiante INT,
+	@Nombre VARCHAR(150),
+	@Apellido VARCHAR(150),
+	@Creditos INT
+
+AS BEGIN 
+	
+	SET NOCOUNT ON
+
+	DECLARE
+		@EstudianteNoExiste BIT = 0 --BANDERA
+	IF(SELECT COUNT(*) FROM Estudiante WHERE estudiante_id = @CodigoEstudiante) = 0
+		SELECT @EstudianteNoExiste = 1
+	IF @EstudianteNoExiste = 1
+	BEGIN 
+		INSERT INTO Estudiante( estudiante_id,Nombre,Apellido,Creditos)SELECT @CodigoEstudiante,@Nombre,@Apellido,@Creditos
+		PRINT 'ESTUDIANTE INSCRITO'
+	END
+	ELSE 
+		PRINT 'CODIGO DE ESTUDIANTE YA EXISTE'
+END
+---validarcion de proceso
+EXEC InscribirEstudiante 2, 'alfredo','prez',10
+SELECT * FROM Estudiante
+
+----proceso CURSO ASIGNADO
+
+CREATE PROCEDURE CursoAsignacion
+	@Curso_id INT,
+	@Nombre_Curso VARCHAR(150),
+	@Horario VARCHAR(150),
+	@Facultad_id INT,
+	@Salon_id VARCHAR(150)
+	
+AS BEGIN 
+	
+	SET NOCOUNT ON
+
+	DECLARE
+		@CursoAsignacion BIT = 0 --BANDERA
+	IF(SELECT COUNT(*) FROM Curso WHERE Curso_id = @Curso_id) = 0
+		SELECT @CursoAsignacion = 1
+	IF @CursoAsignacion = 1 OR @CursoAsignacion = NULL
+	BEGIN 
+		INSERT INTO Curso(Curso_id,Nombre_Curso,Horario,Facultad_id,Salon_id )SELECT @Curso_id,@Nombre_Curso,@Horario,@Facultad_id,@Salon_id
+		PRINT 'CURSO VALIDO'
+	END
+	ELSE 
+		PRINT 'CURSO YA EXISTE'
+END
+
+--VALIDACION
+EXEC CursoAsignacion '','fisica','10am ',5990,'s12'
+SELECT * FROM Curso
+
+--BORRAR
+DROP PROCEDURE InscribirEstudiante
+----------
+
+
+----PROCESO QUE NO LOGRE INCORPORAR
+BEGIN TRY
+    BEGIN TRANSACTION
+ 
+     COMMIT TRAN -- Transaction Success!
+END TRY
+
+BEGIN CATCH
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRAN --RollBack in case of Error
+ DECLARE @Message varchar(MAX) = ERROR_MESSAGE(),
+        @Severity int = ERROR_SEVERITY(),
+        @State smallint = ERROR_STATE()
+ 
+   RAISEERROR (@Message, @Severity, @State)
+    -- you can Raise ERROR with RAISEERROR() Statement including the details of the exception
+    -- RAISERROR(ERROR_MESSAGE(), ERROR_SEVERITY(), 1)
+END CATCH
